@@ -78,6 +78,12 @@ class Settings(BaseSettings):
 
     api_key: str = ""
     engine_mode: str = "dev"  # dev | staging | production
+    webhook_shared_secret: str = ""
+    inbound_email_webhook_secret: str = ""
+    email_events_webhook_secret: str = ""
+    calcom_webhook_secret: str = ""
+    vapi_webhook_secret: str = ""
+    youtube_policy_webhook_secret: str = ""
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
     engine_version: str = "2027.1"
     db_pool_size: int = 10

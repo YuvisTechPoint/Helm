@@ -1,3 +1,4 @@
+from acquisition.lead_state import CONVERSATION_MACHINE, DEAL_MACHINE, LEAD_MACHINE
 from acquisition.models import (
     AcqStateRow,
     ConsentRow,
@@ -307,14 +308,37 @@ class AcquisitionRepository:
             ]
         return [lead for lead in self._leads if lead["tenant_id"] == tenant_id]
 
-    def update_stage(self, tenant_id: str, email: str, stage: str) -> dict:
-        lead = self.upsert_lead(tenant_id, email, {"stage": stage})
+    def _current_stage(self, tenant_id: str, email: str) -> str:
+        for lead in self.list_leads(tenant_id):
+            if lead["email"].lower() == email.lower():
+                return lead.get("stage", "unknown")
+        return "unknown"
+
+    def update_stage(self, tenant_id: str, email: str, stage: str, *, actor: str = "pipeline", reason: str = "") -> dict:
+        email = email.lower()
+        current = self._current_stage(tenant_id, email)
+        change = LEAD_MACHINE.transition(current, stage, actor=actor, reason=reason)
+        lead = self.upsert_lead(tenant_id, email, {"stage": change.to_state})
         if self.session is not None:
-            stored = self.session.query(LeadRow).filter_by(tenant_id=tenant_id, email=email.lower()).one_or_none()
+            from core.models import StateTransition
+
+            stored = self.session.query(LeadRow).filter_by(tenant_id=tenant_id, email=email).one_or_none()
             if stored:
-                stored.stage = stage
-                stored.body = {**stored.body, "stage": stage}
-                self.session.commit()
+                stored.stage = change.to_state
+                stored.body = {**stored.body, "stage": change.to_state}
+            if change.from_state != change.to_state:
+                self.session.add(
+                    StateTransition(
+                        machine="lead",
+                        aggregate_id=email,
+                        tenant_id=tenant_id,
+                        from_state=change.from_state,
+                        to_state=change.to_state,
+                        actor=actor,
+                        reason=reason,
+                    )
+                )
+            self.session.commit()
         return lead
 
     def add_message(self, tenant_id: str, email: str, message: dict) -> dict:
@@ -339,15 +363,37 @@ class AcquisitionRepository:
             self.session.commit()
         return row
 
-    def set_conversation_state(self, tenant_id: str, email: str, state: str) -> None:
+    def set_conversation_state(self, tenant_id: str, email: str, state: str, *, actor: str = "pipeline") -> None:
         email = email.lower()
+        current = "open"
         for row in self._conversations:
             if row["tenant_id"] == tenant_id and row["lead_email"] == email:
-                row["state"] = state
+                current = row.get("state", "open")
         if self.session is not None:
             stored = self.session.query(ConversationRow).filter_by(tenant_id=tenant_id, lead_email=email).one_or_none()
             if stored is not None:
-                stored.state = state
+                current = stored.state or "open"
+        change = CONVERSATION_MACHINE.transition(current, state, actor=actor)
+        for row in self._conversations:
+            if row["tenant_id"] == tenant_id and row["lead_email"] == email:
+                row["state"] = change.to_state
+        if self.session is not None:
+            stored = self.session.query(ConversationRow).filter_by(tenant_id=tenant_id, lead_email=email).one_or_none()
+            if stored is not None:
+                stored.state = change.to_state
+                if change.from_state != change.to_state:
+                    from core.models import StateTransition
+
+                    self.session.add(
+                        StateTransition(
+                            machine="conversation",
+                            aggregate_id=email,
+                            tenant_id=tenant_id,
+                            from_state=change.from_state,
+                            to_state=change.to_state,
+                            actor=actor,
+                        )
+                    )
                 self.session.commit()
 
     def list_conversations(self, tenant_id: str) -> list[dict]:
@@ -384,14 +430,16 @@ class AcquisitionRepository:
         rows = [row for row in self.list_deals(tenant_id) if row["lead_email"].lower() == email.lower()]
         return rows[-1] if rows else None
 
-    def update_deal(self, tenant_id: str, email: str, status: str, updates: dict | None = None) -> dict | None:
+    def update_deal(self, tenant_id: str, email: str, status: str, updates: dict | None = None, *, actor: str = "pipeline") -> dict | None:
         email = email.lower()
         updates = updates or {}
+        current = (self.get_deal(tenant_id, email) or {}).get("status", "unknown")
+        change = DEAL_MACHINE.transition(current, status, actor=actor)
         target = None
         for row in reversed(self._deals):
             if row["tenant_id"] == tenant_id and row["lead_email"].lower() == email:
                 row.update(updates)
-                row["status"] = status
+                row["status"] = change.to_state
                 target = row
                 break
         if self.session is not None:
@@ -402,8 +450,21 @@ class AcquisitionRepository:
                 .first()
             )
             if stored is not None:
-                stored.status = status
-                stored.body = {**(stored.body or {}), **updates, "status": status}
+                stored.status = change.to_state
+                stored.body = {**(stored.body or {}), **updates, "status": change.to_state}
+                if change.from_state != change.to_state:
+                    from core.models import StateTransition
+
+                    self.session.add(
+                        StateTransition(
+                            machine="deal",
+                            aggregate_id=email,
+                            tenant_id=tenant_id,
+                            from_state=change.from_state,
+                            to_state=change.to_state,
+                            actor=actor,
+                        )
+                    )
                 self.session.commit()
                 target = {**stored.body, "tenant_id": tenant_id, "lead_email": email, "price_cents": stored.price_cents}
         return target

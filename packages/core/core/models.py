@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from sqlalchemy import JSON, Integer, String, Text
+from sqlalchemy import JSON, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from core.db import Base
@@ -74,6 +74,48 @@ class ExceptionItem(Base):
     kind: Mapped[str] = mapped_column(String(64))
     message: Mapped[str] = mapped_column(Text)
     resolved: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[str] = mapped_column(String(40), default=lambda: utcnow().isoformat())
+
+
+class OutboxMessage(Base):
+    __tablename__ = "outbox"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    event_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    tenant_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    aggregate_type: Mapped[str] = mapped_column(String(64))
+    aggregate_id: Mapped[str] = mapped_column(String(200))
+    event_type: Mapped[str] = mapped_column(String(80))
+    payload: Mapped[dict] = mapped_column(JSON, default=_empty)
+    status: Mapped[str] = mapped_column(String(32), default="pending", index=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    last_error: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[str] = mapped_column(String(40), default=lambda: utcnow().isoformat())
+    published_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
+
+
+class WebhookReceipt(Base):
+    __tablename__ = "webhook_receipts"
+    __table_args__ = (UniqueConstraint("provider", "event_id", name="uq_webhook_provider_event"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    provider: Mapped[str] = mapped_column(String(64), index=True)
+    event_id: Mapped[str] = mapped_column(String(200))
+    payload_hash: Mapped[str] = mapped_column(String(64))
+    processed_at: Mapped[str] = mapped_column(String(40), default=lambda: utcnow().isoformat())
+
+
+class StateTransition(Base):
+    __tablename__ = "state_transitions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    machine: Mapped[str] = mapped_column(String(64), index=True)
+    aggregate_id: Mapped[str] = mapped_column(String(200), index=True)
+    tenant_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    from_state: Mapped[str] = mapped_column(String(64))
+    to_state: Mapped[str] = mapped_column(String(64))
+    actor: Mapped[str] = mapped_column(String(120), default="system")
+    reason: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[str] = mapped_column(String(40), default=lambda: utcnow().isoformat())
 
 

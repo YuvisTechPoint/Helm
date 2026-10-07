@@ -11,3 +11,13 @@ if _TEST_DB.exists():
 
 os.environ["USE_SQLITE"] = "true"
 os.environ["SQLITE_URL"] = f"sqlite:///{_TEST_DB.as_posix()}"
+
+
+import pytest
+
+
+@pytest.fixture
+def session():
+    from core.bootstrap import db_session
+
+    return db_session()

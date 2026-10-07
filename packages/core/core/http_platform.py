@@ -8,7 +8,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from core.errors import BudgetExceeded, ConfigurationError, IsolationError, MissingCredentials, PolicyDenied, ProviderUnavailable
+from core.errors import BudgetExceeded, ConfigurationError, InvalidTransition, IsolationError, MissingCredentials, PolicyDenied, ProviderUnavailable
 
 
 OPEN_PATHS = {"/health", "/ready", "/live", "/metrics", "/docs", "/openapi.json", "/redoc"}
@@ -54,6 +54,10 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(PolicyDenied)
     async def policy_denied(_request: Request, exc: PolicyDenied):
         return JSONResponse({"detail": str(exc), "code": "policy_denied"}, status_code=409)
+
+    @app.exception_handler(InvalidTransition)
+    async def invalid_transition(_request: Request, exc: InvalidTransition):
+        return JSONResponse({"detail": str(exc), "code": "conflict"}, status_code=409)
 
     @app.exception_handler(BudgetExceeded)
     async def budget_exceeded(_request: Request, exc: BudgetExceeded):

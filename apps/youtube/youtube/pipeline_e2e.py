@@ -18,6 +18,7 @@ from youtube.modules.llm_script import LlmScriptWriter
 from youtube.pipeline import SHORT_TOPICS
 from youtube.providers import FakeYouTube
 from youtube.quota import QuotaLedger
+from youtube.topic_store import TopicStore
 
 
 class YouTubePipeline:
@@ -36,6 +37,7 @@ class YouTubePipeline:
         analytics=None,
         settings=None,
         vault=None,
+        session=None,
     ):
         self.kill = kill or KillSwitchBoard()
         self.ledger = ledger or QuotaLedger.from_env(daily_limit=200_000)
@@ -52,6 +54,7 @@ class YouTubePipeline:
         self.analytics = analytics
         self.settings = settings
         self.vault = vault
+        self.topics = TopicStore(session)
 
     def plan_week(self) -> dict:
         niche = scout()
@@ -68,6 +71,13 @@ class YouTubePipeline:
     def produce_one(self, topic: dict, past_scripts: list[str], previous_format: str | None) -> dict:
         from core.jobs import ExceptionQueue
 
+        slug = topic.get("slug", topic.get("title", "topic"))
+        self.topics.upsert(slug, topic.get("title", slug), topic.get("cluster", "general"), topic.get("kind", "long"))
+        for stage in ("planned", "researching", "scripting", "gating", "rendering", "publishing"):
+            try:
+                self.topics.transition(slug, stage)
+            except Exception:
+                pass
         outcome = produce_topic(
             topic,
             writer=LlmScriptWriter(),
@@ -84,6 +94,15 @@ class YouTubePipeline:
         )
         if outcome["status"] == "published_private":
             self.events.append("video_published", "m11", {"youtube_id": outcome["youtube_id"], "slug": topic["slug"]})
+            try:
+                self.topics.transition(slug, "published")
+            except Exception:
+                pass
+        elif outcome.get("status") in {"blocked", "failed"}:
+            try:
+                self.topics.transition(slug, "blocked" if outcome["status"] == "blocked" else "retryable_failure")
+            except Exception:
+                pass
         return outcome
 
     def collect_metrics(self, video_id: str, published_at: datetime, live_metrics: dict | None = None) -> list[dict]:

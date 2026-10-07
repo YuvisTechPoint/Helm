@@ -54,12 +54,18 @@ async def start_on_temporal(workflow: str, payload: dict, workflow_id: str) -> d
 def dispatch(workflow: str, payload: dict, workflow_id: str | None, runner) -> dict:
     import uuid
 
+    from core.errors import ProviderUnavailable
+    from core.provider_plane import is_production
+
     workflow_id = workflow_id or f"{workflow}-{uuid.uuid4().hex[:10]}"
+    if is_production() and not temporal_available():
+        raise ProviderUnavailable("Temporal is required in production mode")
     if temporal_available():
         try:
             return asyncio.run(start_on_temporal(workflow, payload, workflow_id))
-        except Exception:
-            pass
+        except Exception as exc:
+            if is_production():
+                raise ProviderUnavailable(f"Temporal dispatch failed: {exc}") from exc
     result: Any = runner(workflow, payload)
     return {
         "workflow_id": workflow_id,

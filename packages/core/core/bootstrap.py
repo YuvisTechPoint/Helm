@@ -9,13 +9,30 @@ from core.db import Base, make_engine
 from core.vault import MemoryVault, SqlVault
 
 
+def _run_migrations(url: str) -> bool:
+    if os.environ.get("RUN_MIGRATIONS", "").lower() not in {"1", "true", "yes"} and get_settings().engine_mode != "production":
+        return False
+    try:
+        from alembic import command
+        from alembic.config import Config
+
+        root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+        cfg = Config(os.path.join(root, "alembic.ini"))
+        cfg.set_main_option("sqlalchemy.url", url)
+        command.upgrade(cfg, "head")
+        return True
+    except Exception:
+        return False
+
+
 def ensure_schema(url: str):
     import acquisition.models  # noqa: F401
     import youtube.models  # noqa: F401
 
     settings = get_settings()
     engine = make_engine(url, pool_size=settings.db_pool_size, max_overflow=settings.db_max_overflow)
-    Base.metadata.create_all(engine)
+    if not _run_migrations(url):
+        Base.metadata.create_all(engine)
     return engine
 
 

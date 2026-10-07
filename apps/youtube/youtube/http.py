@@ -87,6 +87,7 @@ class YoutubeState:
             analytics=analytics_client(settings, self.vault),
             settings=settings,
             vault=self.vault,
+            session=session,
             notifier=__import__("core.notify", fromlist=["NotifierHub"]).NotifierHub(),
         )
         self.last_dry_run: dict | None = None

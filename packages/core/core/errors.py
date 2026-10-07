@@ -48,3 +48,7 @@ class ProviderUnavailable(EngineError):
 
 class ConfigurationError(EngineError):
     pass
+
+
+class InvalidTransition(EngineError):
+    pass

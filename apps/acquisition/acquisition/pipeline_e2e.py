@@ -46,6 +46,7 @@ from acquisition.tenant_caps import TenantOutreachCap
 from core.config import get_settings
 from core.errors import PolicyDenied
 from core.events import EventLog
+from core.outbox import Outbox
 from core.exception_store import ExceptionStore
 from core.notify import NotifierHub
 
@@ -93,6 +94,7 @@ class LeadPipeline:
         self.calendar = runtime.calendar
         self.verifier = email_verifier()
         self.events = EventLog(repo.session)
+        self.outbox = Outbox(repo.session)
         self.exceptions = ExceptionStore(repo.session)
         self.notifier = NotifierHub()
         self.copywriter = LlmCopywriter(runtime.llm)
@@ -108,17 +110,21 @@ class LeadPipeline:
     def _event(self, event_type: str, module: str, payload: dict, tenant_id: str) -> None:
         profile = self.repo.get_profile_meta(tenant_id) or {}
         prompt = self.repo.get_state(tenant_id, "prompt", {"name": "reply-v1"})
-        self.events.append(
-            event_type,
-            module,
-            {
-                **payload,
-                "profile_version": profile.get("version", 1),
-                "channel": payload.get("channel", "email"),
-                "agent_version": AGENT_VERSION,
-                "prompt_version": prompt.get("name", "reply-v1"),
-            },
+        body = {
+            **payload,
+            "profile_version": profile.get("version", 1),
+            "channel": payload.get("channel", "email"),
+            "agent_version": AGENT_VERSION,
+            "prompt_version": prompt.get("name", "reply-v1"),
+        }
+        aggregate_id = payload.get("email") or payload.get("lead_id") or tenant_id
+        self.outbox.publish(
+            event_type=event_type,
+            aggregate_type="lead",
+            aggregate_id=str(aggregate_id),
+            payload=body,
             tenant_id=tenant_id,
+            actor=module,
         )
 
     def _lead(self, tenant_id: str, email: str) -> dict | None:

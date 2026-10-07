@@ -48,6 +48,12 @@ class Autopilot:
                 self._last_daily_date = today
             except Exception as exc:
                 done["daily"] = {"error": str(exc)}
+        try:
+            from core.outbox import Outbox
+
+            done["outbox"] = Outbox(self.container.session).drain()
+        except Exception as exc:
+            done["outbox"] = {"error": str(exc)}
         self.last = done
         return done
 

@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          pip install -e packages/core -e apps/youtube -e apps/acquisition -e apps/api
+          pip install pytest httpx alembic sqlalchemy pydantic-settings cryptography
+      - name: Run tests
+        env:
+          USE_SQLITE: "true"
+          SQLITE_URL: sqlite:////tmp/engine-test.db
+          ENGINE_MODE: dev
+        run: pytest -q
