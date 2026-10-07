@@ -23,9 +23,10 @@ def create_app() -> FastAPI:
         app.state.container = container
         from core.autopilot import Autopilot
 
-        from core.bootstrap_tenant import bootstrap_tenant
+        if not os.environ.get("PYTEST_CURRENT_TEST"):
+            from core.bootstrap_tenant import bootstrap_tenant
 
-        app.state.bootstrap = bootstrap_tenant(container)
+            app.state.bootstrap = bootstrap_tenant(container)
         auto = Autopilot(container)
         app.state.autopilot = auto
         if not os.environ.get("PYTEST_CURRENT_TEST") and os.environ.get("DISABLE_AUTOPILOT") != "1":

@@ -10,3 +10,4 @@ dist/
 *.mp4
 .engine.db
 data/*.db
+data/test_engine.db

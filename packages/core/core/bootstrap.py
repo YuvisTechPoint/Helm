@@ -19,13 +19,17 @@ def ensure_schema(url: str):
     return engine
 
 
-@lru_cache
-def session_factory(url: str | None = None):
+def _db_url(url: str | None = None) -> str:
     settings = get_settings()
     target = url or settings.database_url
     if target.startswith("postgresql") and os.environ.get("USE_SQLITE", "").lower() == "true":
         target = os.environ.get("SQLITE_URL", "sqlite:///./data/engine.db")
-    engine = ensure_schema(target)
+    return target
+
+
+@lru_cache
+def session_factory(resolved_url: str):
+    engine = ensure_schema(resolved_url)
     return sessionmaker(bind=engine, expire_on_commit=False)
 
 
@@ -40,4 +44,4 @@ def vault_for(session: Session | None, settings: Settings | None = None):
 
 
 def db_session(url: str | None = None) -> Session:
-    return session_factory(url)()
+    return session_factory(_db_url(url))()
