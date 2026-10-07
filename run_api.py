@@ -1,31 +1,11 @@
-"""Start the Dual Engine API."""
+"""Backward-compatible entrypoint. Prefer: python scripts/api.py"""
 
-import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
-for rel in ("packages/core", "apps/youtube", "apps/acquisition", "apps/api"):
-    sys.path.insert(0, str(ROOT / rel))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-
-def _kill_port(port: int) -> None:
-    if sys.platform == "win32":
-        out = subprocess.run(["netstat", "-ano"], capture_output=True, text=True, check=False)
-        for line in out.stdout.splitlines():
-            if f":{port}" in line and "LISTENING" in line:
-                pid = line.strip().split()[-1]
-                if pid.isdigit():
-                    subprocess.run(["taskkill", "/PID", pid, "/F"], check=False)
-
+from scripts.api import main
 
 if __name__ == "__main__":
-    import os
-
-    import uvicorn
-
-    os.environ.setdefault("USE_SQLITE", "true")
-    (ROOT / "data").mkdir(exist_ok=True)
-    os.environ.setdefault("SQLITE_URL", f"sqlite:///{(ROOT / 'data' / 'engine.db').as_posix()}")
-    _kill_port(8000)
-    uvicorn.run("api.main:create_app", factory=True, host="127.0.0.1", port=8000, reload=False)
+    main()

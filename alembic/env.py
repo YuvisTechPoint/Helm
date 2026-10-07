@@ -7,10 +7,9 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 ROOT = Path(__file__).resolve().parents[1]
-for rel in ("packages/core", "apps/youtube", "apps/acquisition"):
-    path = str(ROOT / rel)
-    if path not in sys.path:
-        sys.path.insert(0, path)
+src = str(ROOT / "src")
+if src not in sys.path:
+    sys.path.insert(0, src)
 
 from core.db import Base  # noqa: E402
 import acquisition.models  # noqa: E402,F401

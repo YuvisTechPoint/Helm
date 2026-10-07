@@ -93,7 +93,6 @@ services:
     depends_on:
       - api
       - temporal
-    # Scale independently of the API: `docker compose up --scale worker=3`
     environment:
       DATABASE_URL: postgresql+psycopg://engine:engine@postgres:5432/engine
       REDIS_URL: redis://redis:6379/0
@@ -103,12 +102,12 @@ services:
       S3_SECRET_KEY: engine-secret
       S3_BUCKET: engine
 
-  owner-web:
+  dashboard:
     image: node:22-alpine
     working_dir: /app
     command: sh -c "npm install && npm run dev -- --hostname 0.0.0.0"
     volumes:
-      - ./apps/owner-web:/app
+      - ./apps/dashboard:/app
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
     ports:

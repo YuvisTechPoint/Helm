@@ -1,4 +1,0 @@
-acquisition
-api
-core
-youtube

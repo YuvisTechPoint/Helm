@@ -5,7 +5,8 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "dual-engine"
 version = "0.1.0"
-description = "Faceless YouTube engine and lead-to-client acquisition engine"
+description = "Autonomous faceless YouTube channel and lead-to-client acquisition platform"
+readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
   "fastapi>=0.115",
@@ -25,9 +26,29 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=8.3"]
 
+[project.scripts]
+dual-engine-api = "scripts.api:main"
+dual-engine-worker = "scripts.worker:main"
+dual-engine-e2e = "scripts.e2e:main"
+dual-engine-dev = "scripts.dev:main"
+
 [tool.pytest.ini_options]
-pythonpath = ["packages/core", "apps/youtube", "apps/acquisition", "apps/api"]
+pythonpath = ["src"]
 testpaths = ["tests"]
 
+[tool.setuptools.package-dir]
+"" = "src"
+
 [tool.setuptools.packages.find]
-where = ["packages/core", "apps/youtube", "apps/acquisition", "apps/api"]
+where = ["src"]
+
+[tool.setuptools]
+py-modules = ["scripts"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E501"]

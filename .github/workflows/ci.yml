@@ -13,10 +13,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install dependencies
-        run: |
-          pip install -e packages/core -e apps/youtube -e apps/acquisition -e apps/api
-          pip install pytest httpx alembic sqlalchemy pydantic-settings cryptography
+      - name: Install package
+        run: pip install -e ".[dev]"
       - name: Run tests
         env:
           USE_SQLITE: "true"

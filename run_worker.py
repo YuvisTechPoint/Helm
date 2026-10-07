@@ -1,12 +1,11 @@
-import asyncio
+"""Backward-compatible worker entrypoint."""
+
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
-for rel in ("packages/core", "apps/youtube", "apps/acquisition", "apps/api"):
-    sys.path.insert(0, str(ROOT / rel))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from youtube.worker import main
+from scripts.worker import main
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
