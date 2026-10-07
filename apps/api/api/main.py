@@ -22,6 +22,9 @@ def create_app() -> FastAPI:
     async def lifespan(app: FastAPI):
         app.state.container = container
         from core.autopilot import Autopilot
+        from core.provider_plane import validate_startup
+
+        app.state.provider_blockers = validate_startup(settings)
 
         if not os.environ.get("PYTEST_CURRENT_TEST"):
             from core.bootstrap_tenant import bootstrap_tenant
@@ -83,10 +86,13 @@ def create_app() -> FastAPI:
         from core.temporal_gw import temporal_available
 
         temporal_up = temporal_available()
+        providers = plane.get("providers", {})
         return {
             "status": "ok" if ready else "degraded",
             "ready": ready,
+            "engine_mode": settings.engine_mode,
             "version": settings.engine_version,
+            "providers": providers,
             "audit_approved": youtube.audit_approved,
             "youtube_kill_switch": yt_kill,
             "acquisition_kill_switch": acq_kill,
@@ -119,6 +125,16 @@ def create_app() -> FastAPI:
     @app.get("/ready")
     def ready():
         return _health_payload()
+
+    @app.get("/live")
+    def live():
+        return {"alive": True, "version": settings.engine_version}
+
+    @app.get("/metrics")
+    def metrics_endpoint():
+        from core.observability import metrics
+
+        return metrics().snapshot()
 
     @app.get("/features")
     def features():

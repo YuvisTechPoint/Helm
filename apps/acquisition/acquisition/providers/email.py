@@ -1,5 +1,6 @@
 from core.config import get_settings
 from core.errors import MissingCredentials
+from core.provider_plane import email_mode, is_dev
 
 
 class DirectMailbox:
@@ -60,9 +61,12 @@ class ZeroBounceVerifier:
 
 def email_sender():
     settings = get_settings()
-    if settings.email_provider == "instantly" and settings.instantly_api_key:
+    mode = email_mode(settings)
+    if mode == "live":
         return InstantlyProvider(settings.instantly_api_key)
-    return DirectMailbox()
+    mailbox = DirectMailbox()
+    mailbox.simulated = True  # type: ignore[attr-defined]
+    return mailbox
 
 
 def email_verifier():

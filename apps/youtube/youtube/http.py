@@ -58,7 +58,7 @@ class DiagnoseIn(BaseModel):
 
 
 class YoutubeState:
-    def __init__(self, settings: Settings | None = None, session=None):
+    def __init__(self, settings: Settings | None = None, session=None, circuits=None):
         settings = settings or Settings()
         self.settings = settings
         self.session = session
@@ -68,6 +68,10 @@ class YoutubeState:
         self.jobs = JobBook(session)
         self.store = DbVideoStore(session) if session is not None else InMemoryVideoStore()
         self.client = youtube_client(settings, self.vault)
+        if circuits:
+            from core.provider_plane import with_circuit
+
+            with_circuit(self.client, circuits.get("youtube"), "insert")
         self.audit_approved = settings.yt_audit_approved
         self.oauth_client_id = settings.yt_client_id or "replace-me.apps.googleusercontent.com"
         self.redirect_uri = settings.yt_redirect_uri
@@ -141,6 +145,15 @@ def router(state: YoutubeState) -> APIRouter:
 
     @api.post("/publish")
     def publish_video(body: PublishIn):
+        from core.errors import MissingCredentials
+        from core.provider_plane import is_production, youtube_client_mode
+
+        if not body.dry_run and is_production(state.settings):
+            try:
+                if youtube_client_mode(state.settings) != "live":
+                    raise HTTPException(503, "YouTube OAuth required for live publish in production")
+            except MissingCredentials as exc:
+                raise HTTPException(503, str(exc)) from exc
         request = PublishRequest(
             idempotency_key=body.idempotency_key,
             title=body.title,

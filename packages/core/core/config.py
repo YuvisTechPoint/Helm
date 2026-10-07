@@ -77,6 +77,7 @@ class Settings(BaseSettings):
     acquisition_region: str = "india"
 
     api_key: str = ""
+    engine_mode: str = "dev"  # dev | staging | production
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
     engine_version: str = "2027.1"
     db_pool_size: int = 10

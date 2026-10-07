@@ -1,4 +1,6 @@
 from core.config import get_settings
+from core.errors import ProviderUnavailable
+from core.provider_plane import is_dev, sourcing_mode
 
 
 FIXTURE_LEADS = [
@@ -54,9 +56,12 @@ class ApolloSource:
 def source_leads(icp: dict | None = None) -> list[dict]:
     settings = get_settings()
     icp = icp or {"roles": ["Head of Ecommerce"], "angle": "checkout friction may be costing conversions"}
-    if settings.apollo_api_key:
+    mode = sourcing_mode(settings)
+    if mode == "live":
         try:
             return ApolloSource(settings.apollo_api_key).search(icp)
-        except Exception:
-            pass
-    return list(FIXTURE_LEADS)
+        except Exception as exc:
+            raise ProviderUnavailable(f"Apollo sourcing failed: {exc}") from exc
+    if is_dev(settings):
+        return [{**lead, "source": "fixture"} for lead in FIXTURE_LEADS]
+    raise ProviderUnavailable("Lead sourcing unavailable without APOLLO_API_KEY")

@@ -7,7 +7,7 @@ from youtube.store import DbMetricStore, DbOptimizerStore, DbVideoStore
 
 
 class YouTubeRuntime:
-    def __init__(self, base=None):
+    def __init__(self, base=None, circuits=None):
         base = base or get_runtime()
         self.settings = base.settings
         self.session = base.session
@@ -28,6 +28,12 @@ class YouTubeRuntime:
         self.tts = tts(base.settings)
         self.analytics = analytics_client(base.settings, base.vault)
         self.client = youtube_client(base.settings, base.vault)
+        if circuits:
+            from core.provider_plane import with_circuit
+
+            with_circuit(self.client, circuits.get("youtube"), "insert")
+            if self.llm is not None:
+                with_circuit(self.llm, circuits.get("llm"), "complete")
 
     @property
     def audit_approved(self) -> bool:
@@ -46,9 +52,9 @@ class YouTubeRuntime:
 _CTX: YouTubeRuntime | None = None
 
 
-def bind_youtube_runtime(base=None) -> YouTubeRuntime:
+def bind_youtube_runtime(base=None, circuits=None) -> YouTubeRuntime:
     global _CTX
-    _CTX = YouTubeRuntime(base or get_runtime())
+    _CTX = YouTubeRuntime(base or get_runtime(), circuits=circuits)
     return _CTX
 
 

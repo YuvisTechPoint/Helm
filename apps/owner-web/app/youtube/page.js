@@ -21,6 +21,7 @@ import RefreshLink from "../../components/RefreshLink";
 import StatCard from "../../components/StatCard";
 import { apiGet, formatNumber } from "../../lib/api";
 import PivotPanel from "./PivotPanel";
+import { ConnectYouTubeButton, KillSwitchToggle } from "./YouTubeControls";
 
 export default async function YouTubePage() {
   const [data, videosRes, ypp, plan, pivotRes] = await Promise.all([
@@ -41,6 +42,8 @@ export default async function YouTubePage() {
         title="YouTube engine"
         description="Private-first publishing until the channel audit is approved. The kill switch halts every upload. Metrics and one-change optimisation run after each publish."
       >
+        <ConnectYouTubeButton />
+        <KillSwitchToggle active={data.kill_switch} />
         <RefreshLink />
       </PageHeader>
 

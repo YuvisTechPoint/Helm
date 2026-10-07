@@ -46,7 +46,9 @@ class CircuitBreaker:
         if not self.allow():
             if fallback is not None:
                 return fallback()
-            raise RuntimeError(f"circuit open: {self.name}")
+            from core.errors import ProviderUnavailable
+
+            raise ProviderUnavailable(f"circuit open: {self.name}")
         try:
             result = fn(*args, **kwargs)
         except Exception:

@@ -1,4 +1,5 @@
 from core.config import Settings
+from core.provider_plane import youtube_client_mode
 from youtube.providers import (
     AnthropicLlm,
     ElevenLabsTts,
@@ -13,7 +14,8 @@ from youtube.providers import (
 
 
 def youtube_client(settings: Settings, vault=None, transport=None):
-    if settings.youtube_refresh_token and settings.yt_client_id and settings.yt_client_secret:
+    mode = youtube_client_mode(settings)
+    if mode == "live":
         from youtube.oauth_flow import refresh_access_token
 
         tokens = refresh_access_token(settings.yt_client_id, settings.yt_client_secret, settings.youtube_refresh_token)
@@ -23,7 +25,9 @@ def youtube_client(settings: Settings, vault=None, transport=None):
         if transport is not None:
             return ResumableUploader(transport, access)
         return GoogleYouTubeData(access)
-    return FakeYouTube()
+    client = FakeYouTube()
+    client.simulated = True  # type: ignore[attr-defined]
+    return client
 
 
 def llm(settings: Settings):

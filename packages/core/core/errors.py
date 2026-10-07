@@ -40,3 +40,11 @@ class OneChangeError(EngineError):
 
 class RepeatTopic(EngineError):
     pass
+
+
+class ProviderUnavailable(EngineError):
+    pass
+
+
+class ConfigurationError(EngineError):
+    pass

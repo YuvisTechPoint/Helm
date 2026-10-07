@@ -54,6 +54,7 @@ class AppContainer:
             "llm": CircuitBreaker("llm"),
             "youtube": CircuitBreaker("youtube"),
             "payments": CircuitBreaker("payments"),
+            "esign": CircuitBreaker("esign"),
         }
         container = cls(settings=settings, session=session, runtime=runtime, redis=get_redis(), circuits=circuits)
         from acquisition.http import AcquisitionState
@@ -61,20 +62,26 @@ class AppContainer:
         from youtube.http import YoutubeState
         from youtube.runtime_ctx import bind_youtube_runtime
 
-        container.youtube = YoutubeState(settings=settings, session=session)
+        container.youtube = YoutubeState(settings=settings, session=session, circuits=circuits)
         container.acquisition = AcquisitionState(settings=settings, session=session)
-        bind_acquisition_runtime(runtime)
-        bind_youtube_runtime(runtime)
+        bind_acquisition_runtime(runtime, circuits=circuits)
+        bind_youtube_runtime(runtime, circuits=circuits)
         return container
 
     def health(self) -> dict:
+        from core.provider_plane import manifest
+
         yt_kill = self.runtime.kill.active("youtube")
         acq_kill = self.runtime.kill.active("acquisition")
+        providers = manifest(self.settings)
+        base_ready = not yt_kill and not acq_kill
+        ready = base_ready and providers["production_ready"] if providers["engine_mode"] == "production" else base_ready
         return {
-            "ready": not yt_kill and not acq_kill,
+            "ready": ready,
             "database": self.session is not None,
             "circuits": {name: breaker.status for name, breaker in self.circuits.items()},
             "cache": type(self.redis).__name__,
+            "providers": providers,
         }
 
 

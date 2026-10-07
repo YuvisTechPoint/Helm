@@ -11,7 +11,7 @@ from youtube.providers_factory import llm
 
 
 class AcquisitionRuntime:
-    def __init__(self, base=None):
+    def __init__(self, base=None, circuits=None):
         base = base or get_runtime()
         self.settings = base.settings
         self.session = base.session
@@ -30,14 +30,22 @@ class AcquisitionRuntime:
         self.budget.configure(base.settings.acquisition_tenant_id, "outreach", 100_000)
         self.exceptions = base.exceptions
         self.notifier = base.notifier
+        if circuits:
+            from core.provider_plane import with_circuit
+
+            with_circuit(self.sender, circuits.get("email"), "send")
+            if self.llm is not None:
+                with_circuit(self.llm, circuits.get("llm"), "complete")
+            with_circuit(self.payments, circuits.get("payments"), "payment_link")
+            with_circuit(self.esign, circuits.get("esign"), "send")
 
 
 _CTX: AcquisitionRuntime | None = None
 
 
-def bind_acquisition_runtime(base=None) -> AcquisitionRuntime:
+def bind_acquisition_runtime(base=None, circuits=None) -> AcquisitionRuntime:
     global _CTX
-    _CTX = AcquisitionRuntime(base or get_runtime())
+    _CTX = AcquisitionRuntime(base or get_runtime(), circuits=circuits)
     return _CTX
 
 

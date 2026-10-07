@@ -8,10 +8,10 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from core.errors import BudgetExceeded, IsolationError, PolicyDenied
+from core.errors import BudgetExceeded, ConfigurationError, IsolationError, MissingCredentials, PolicyDenied, ProviderUnavailable
 
 
-OPEN_PATHS = {"/health", "/ready", "/docs", "/openapi.json", "/redoc"}
+OPEN_PATHS = {"/health", "/ready", "/live", "/metrics", "/docs", "/openapi.json", "/redoc"}
 
 
 class RequestContextMiddleware(BaseHTTPMiddleware):
@@ -34,8 +34,17 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
                     status_code=401,
                     headers={"X-Request-Id": request_id, "X-Engine-Version": self.engine_version},
                 )
+        from core.observability import metrics
+
+        metrics().inc("http_requests")
         with bind_context(tenant=self.default_tenant, request=request_id):
-            response = await call_next(request)
+            try:
+                response = await call_next(request)
+            except Exception:
+                metrics().inc("http_errors")
+                raise
+        if response.status_code >= 500:
+            metrics().inc("http_5xx")
         response.headers["X-Request-Id"] = request_id
         response.headers["X-Engine-Version"] = self.engine_version
         return response
@@ -54,6 +63,17 @@ def install_error_handlers(app: FastAPI) -> None:
     async def isolation(_request: Request, exc: IsolationError):
         return JSONResponse({"detail": str(exc), "code": "isolation"}, status_code=403)
 
+    @app.exception_handler(MissingCredentials)
+    async def missing_credentials(_request: Request, exc: MissingCredentials):
+        return JSONResponse({"detail": str(exc), "code": "configuration_error"}, status_code=503)
+
+    @app.exception_handler(ProviderUnavailable)
+    async def provider_unavailable(_request: Request, exc: ProviderUnavailable):
+        return JSONResponse({"detail": str(exc), "code": "provider_error"}, status_code=503)
+
+    @app.exception_handler(ConfigurationError)
+    async def configuration_error(_request: Request, exc: ConfigurationError):
+        return JSONResponse({"detail": str(exc), "code": "configuration_error"}, status_code=503)
 
 def paginate(rows: list, limit: int = 50, offset: int = 0) -> dict:
     limit = max(1, min(int(limit or 50), 200))
