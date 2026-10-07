@@ -14,13 +14,7 @@ from youtube.http import router as youtube_router
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    if os.environ.get("PYTEST_CURRENT_TEST"):
-        os.environ["USE_SQLITE"] = "true"
-        os.environ["SQLITE_URL"] = "sqlite://"
-        from core.bootstrap import session_factory
-
-        session_factory.cache_clear()
-    elif not settings.database_url.startswith("sqlite"):
+    if not settings.database_url.startswith("sqlite"):
         os.environ.setdefault("USE_SQLITE", "false")
     container = bootstrap(settings)
 
