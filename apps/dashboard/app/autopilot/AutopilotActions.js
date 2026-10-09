@@ -9,15 +9,15 @@ const ACTIONS = [
   {
     path: "/autopilot/daily",
     label: "Daily run",
-    desc: "Plan content, collect metrics, source leads, run sequences, and sweep timers.",
+    desc: "Weekly plan, metrics collection, and optional production cycle.",
     icon: Play,
     tone: "accent",
-    runningLabel: "Running both engines…",
+    runningLabel: "Running YouTube autopilot…",
   },
   {
     path: "/autopilot/bootstrap",
     label: "Bootstrap schedules",
-    desc: "Register YouTube and acquisition Temporal crons for unattended operation.",
+    desc: "Register YouTube Temporal crons for unattended operation.",
     icon: CalendarClock,
     tone: "info",
     runningLabel: "Registering schedules…",

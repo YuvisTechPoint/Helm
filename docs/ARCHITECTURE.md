@@ -2,23 +2,24 @@
 
 ## Overview
 
-Dual Engine is a **modular monolith**: one deployable API with clear domain boundaries that can be extracted into services later.
+YouTube Channel Engine is a **modular monolith**: one deployable API with a clear YouTube domain boundary that can be extracted into services later.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  apps/dashboard (Next.js)          HTTP / WebSocket         │
+│  apps/dashboard (Next.js)          HTTP                       │
 └────────────────────────────┬────────────────────────────────┘
                              │
 ┌────────────────────────────▼────────────────────────────────┐
-│  src/api — FastAPI composition, webhooks, autopilot routes  │
-├──────────────┬──────────────────────────────┬───────────────┤
-│ src/youtube  │  src/acquisition             │  src/core     │
-│ produce loop │  lead-to-client pipeline     │  platform     │
-└──────┬───────┴──────────────┬───────────────┴───────┬──────┘
-       │                      │                       │
-       ▼                      ▼                       ▼
-   Postgres/SQLite        Redis counters         Temporal
-   Object store (S3)      Outbox → CRM           Workers
+│  src/api — FastAPI composition, autopilot routes              │
+├──────────────────────────────┬──────────────────────────────┤
+│ src/youtube                  │  src/core                     │
+│ produce loop                 │  platform                     │
+└──────────────┬───────────────┴───────────────┬───────────────┘
+               │                               │
+               ▼                               ▼
+           Postgres/SQLite                 Temporal
+           Object store (S3)               Workers
+           Redis (quota)
 ```
 
 ## Package boundaries
@@ -27,8 +28,7 @@ Dual Engine is a **modular monolith**: one deployable API with clear domain boun
 |---------|----------------|
 | `core` | Config, DB, vault, kill switches, circuit breakers, outbox, events, observability, Temporal gateway |
 | `youtube` | Niche scout → research → script → gate → render → publish → metrics → optimize |
-| `acquisition` | ICP → source → score → outreach → reply → qualify → close |
-| `api` | HTTP surface, webhook ingress, lifespan/bootstrap |
+| `api` | HTTP surface, lifespan/bootstrap |
 
 ## Data flow
 
@@ -39,14 +39,6 @@ Topic → Research → Script → Quality Gate → Voice → Render → Publish 
 ```
 
 State persisted in `topics`, `published_videos`, `metric_snapshots`, `optimization_changes`.
-
-### Acquisition (per lead)
-
-```
-Source → Score → Outreach → Reply classify → Qualify → Proposal → Sign → Pay → Convert
-```
-
-State machines enforce valid transitions on `leads`, `deals`, `conversations`. Events go through transactional outbox.
 
 ## Runtime modes
 
@@ -64,6 +56,19 @@ All runtime paths resolve from `core.paths` — never depend on process CWD:
 - `ARTIFACTS_DIR` — rendered media
 - `REPO_ROOT` — alembic.ini, docs
 
+## Automation maintenance
+
+All workflows are registered in `core/workflow_registry.py` and executed via
+`core/automation.py` (daily/tick), Temporal worker, or sync fallback.
+See [engineering/AUTOMATION.md](engineering/AUTOMATION.md).
+
+## Platform configuration
+
+Runtime posture is resolved in `core.platform.PlatformConfig` — tier-specific resilience,
+security, and observability settings separate from secrets in `.env`.
+
+See [engineering/PLATFORM.md](engineering/PLATFORM.md) for probes, logging, and tier matrix.
+
 ## Deployment
 
 ```bash
@@ -71,3 +76,9 @@ docker compose up --build   # postgres, redis, minio, temporal, api, worker, das
 ```
 
 Scale workers independently: `docker compose up --scale worker=3`
+
+| Probe | Path | Use |
+|-------|------|-----|
+| Liveness | `/live` | Process alive |
+| Readiness | `/ready` | Dependencies OK (503 when not) |
+| Manifest | `/platform` | CI/GitOps — non-secret config |

@@ -1,4 +1,4 @@
-"""Initial schema for both engines."""
+"""Initial schema for the YouTube channel engine."""
 
 from alembic import op
 
@@ -10,7 +10,7 @@ depends_on = None
 
 def upgrade() -> None:
     from core.db import Base
-    import acquisition.models  # noqa: F401
+    import core.models  # noqa: F401
     import youtube.models  # noqa: F401
 
     bind = op.get_bind()
@@ -19,7 +19,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     from core.db import Base
-    import acquisition.models  # noqa: F401
+    import core.models  # noqa: F401
     import youtube.models  # noqa: F401
 
     bind = op.get_bind()

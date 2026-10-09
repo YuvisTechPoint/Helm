@@ -1,6 +1,6 @@
 # Owner Dashboard
 
-Next.js control plane for the dual-engine platform.
+Next.js control plane for the YouTube channel engine.
 
 ## Development
 

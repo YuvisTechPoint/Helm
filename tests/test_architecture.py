@@ -9,8 +9,10 @@ from api.main import create_app
 
 def test_circuit_opens_and_falls_back():
     breaker = CircuitBreaker("llm", failure_threshold=2, reset_after=60)
+
     def boom():
         raise RuntimeError("down")
+
     assert breaker.call(boom, fallback=lambda: "memory") == "memory"
     assert breaker.call(boom, fallback=lambda: "memory") == "memory"
     assert breaker.status == "open"
@@ -37,6 +39,6 @@ def test_container_and_health_scale_plane():
     assert health["scale"]["task_queue"]
     assert "circuits" in health["scale"]
     container = AppContainer.build()
-    assert container.youtube is not None and container.acquisition is not None
+    assert container.youtube is not None
     assert container.youtube.pipeline.store is container.youtube.store
     assert bootstrap().runtime is not None

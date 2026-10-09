@@ -21,3 +21,10 @@ jobs:
           SQLITE_URL: sqlite:////tmp/engine-test.db
           ENGINE_MODE: dev
         run: pytest -q
+
+      - name: Run full E2E harness
+        env:
+          USE_SQLITE: "true"
+          SQLITE_URL: sqlite:////tmp/engine-e2e.db
+          ENGINE_MODE: dev
+        run: python run_e2e.py

@@ -55,34 +55,6 @@ def run_sync_workflow(name: str, payload: dict) -> Any:
             }
         )
         return {"status": "published_private", "published": published, "scenes": visuals["scenes"]}
-    if name == "LeadSequenceWorkflow":
-        from acquisition.sequence_sync import run_lead_sequence_sync
-
-        return run_lead_sequence_sync(payload)
-    if name == "AcquisitionDailyWorkflow":
-        from acquisition.activities import acq_run_daily
-        from acquisition.sequence_sync import run_lead_sequence_sync
-
-        daily = acq_run_daily(payload)
-        sequences = []
-        for email in daily.get("ready", []):
-            sequences.append(
-                run_lead_sequence_sync({"tenant_id": payload.get("tenant_id", "local"), "email": email})
-            )
-        daily["sequences"] = sequences
-        return daily
-    if name == "WeeklyLearningWorkflow":
-        from acquisition.activities import acq_weekly_learning
-
-        return acq_weekly_learning(payload)
-    if name == "MonthlyReportWorkflow":
-        from acquisition.activities import acq_monthly_report
-
-        return acq_monthly_report(payload)
-    if name == "AcquisitionSweepWorkflow":
-        from acquisition.activities import acq_sweep
-
-        return acq_sweep(payload)
     if name == "WeeklyPlanWorkflow":
         from youtube.activities import m2_niche_scout, m3_competitor_report
 

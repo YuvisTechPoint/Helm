@@ -1,15 +1,14 @@
-# Dual Engine
+# YouTube Channel Engine
 
-Autonomous **faceless YouTube** production and **lead-to-client acquisition** platform.
+Autonomous **faceless YouTube** production platform — niche scouting through private publish, analytics, and one-change optimisation.
 
 ## Repository layout
 
 ```
-dual-engine/
+youtube-channel-engine/
 ├── src/                    # Python packages (single install root)
 │   ├── core/               # Shared platform: config, DB, outbox, Temporal, vault
 │   ├── youtube/            # YouTube engine (niche → publish → optimize)
-│   ├── acquisition/        # Lead engine (ICP → outreach → close)
 │   └── api/                # FastAPI composition layer
 ├── apps/
 │   └── dashboard/          # Next.js owner control plane
@@ -41,14 +40,12 @@ python run_worker.py
 python run_e2e.py
 ```
 
-On Unix, `make install && make dev` works too.
-
 Or use installed CLI commands after `pip install -e .`:
 
 ```bash
-dual-engine-api
-dual-engine-worker
-dual-engine-e2e
+youtube-engine-api
+youtube-engine-worker
+youtube-engine-e2e
 ```
 
 ## Configuration
@@ -61,6 +58,7 @@ Copy `.env.example` → `.env`. Key variables:
 | `DATABASE_URL` | Postgres in prod; SQLite auto in dev |
 | `TEMPORAL_ADDRESS` | Durable workflows (`localhost:7233`) |
 | `API_KEY` | Required in production |
+| `CHANNEL_ID` | Logical channel tenant id (default `local`) |
 
 ## Docker
 
@@ -75,8 +73,8 @@ Services: API `:8000`, dashboard `:3000`, Temporal UI `:8080`.
 - [Architecture](docs/ARCHITECTURE.md)
 - [Contributing](docs/CONTRIBUTING.md)
 - [YouTube engine PRD](docs/prd/youtube-engine.md)
-- [Acquisition engine PRD](docs/prd/acquisition-engine.md)
-- [Engineering audit](docs/engineering/full-system-audit.md)
+- [Platform engineering](docs/engineering/PLATFORM.md)
+- [Automation](docs/engineering/AUTOMATION.md)
 
 ## Tests
 

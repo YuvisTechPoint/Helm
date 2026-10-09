@@ -3,8 +3,8 @@ import Sidebar from "../components/Sidebar";
 import Topbar from "../components/Topbar";
 
 export const metadata = {
-  title: "Dual Engine — Owner Dashboard",
-  description: "Control plane for the Faceless YouTube and Lead-to-Client acquisition engines.",
+  title: "YouTube Channel Engine",
+  description: "Control plane for the autonomous faceless YouTube channel engine.",
 };
 
 export const viewport = {

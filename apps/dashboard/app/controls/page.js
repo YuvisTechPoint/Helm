@@ -1,41 +1,28 @@
-import { CalendarCheck, CreditCard, FileSignature, Mail, MessageCircle, MessageSquareText, Phone, PlugZap, ShieldCheck } from "lucide-react";
+import { MonitorPlay, ShieldCheck } from "lucide-react";
 import Alert from "../../components/Alert";
 import Badge from "../../components/Badge";
 import PageHeader from "../../components/PageHeader";
 import RefreshLink from "../../components/RefreshLink";
 import { apiGet } from "../../lib/api";
-import DataRightsPanel from "./DataRightsPanel";
 import KillSwitchPanel from "./KillSwitchPanel";
 
-const PROVIDERS = [
-  { key: "email", label: "Email sending", icon: Mail },
-  { key: "whatsapp", label: "WhatsApp Cloud API", icon: MessageCircle },
-  { key: "sms", label: "Twilio SMS", icon: MessageSquareText },
-  { key: "voice", label: "Vapi voice", icon: Phone },
-  { key: "calendar", label: "Cal.com booking", icon: CalendarCheck },
-  { key: "esign", label: "E-signature", icon: FileSignature },
-  { key: "payments", label: "Payments", icon: CreditCard },
-];
-
 const GUARANTEES = [
-  "No LinkedIn automation or scraping",
-  "No cold WhatsApp, SMS, or AI calls — consent first",
-  "The agent says it is an AI whenever asked",
-  "Price never goes below the configured floor",
-  "Every send passes the policy guard and is audit-logged",
-  "Automation freezes once a client is handed off",
+  "Synthetic media and AI voice disclosures on every upload",
+  "Quality gate blocks publish until script, render, and metadata pass",
+  "Kill switch halts all automated publishing instantly",
+  "Policy strikes and limited ads trigger automatic pause",
+  "Every publish is idempotent and audit-logged",
 ];
 
 export default async function ControlsPage() {
-  const [controls, channels] = await Promise.all([apiGet("/acquisition/controls"), apiGet("/acquisition/channels")]);
-  const error = controls.error || channels.error;
-  const status = channels.channels || {};
+  const status = await apiGet("/youtube/status");
+  const error = status.error;
 
   return (
     <>
       <PageHeader
         title="Controls & compliance"
-        description="Stop any part of the engine instantly, check which providers are live, and handle consent and data-rights requests."
+        description="Pause the channel engine instantly and review policy guarantees enforced in code."
       >
         <RefreshLink />
       </PageHeader>
@@ -44,37 +31,22 @@ export default async function ControlsPage() {
 
       <div className="grid grid-dash">
         <div className="stack-16">
-          {controls.error ? null : <KillSwitchPanel controls={controls} />}
-          <DataRightsPanel />
+          {error ? null : <KillSwitchPanel initialActive={Boolean(status.kill_switch)} initialReason="" />}
         </div>
 
         <div className="stack-16">
           <div className="card">
             <div className="card-header">
-              <h2 className="card-title"><PlugZap size={16} />Providers</h2>
+              <h2 className="card-title"><MonitorPlay size={16} />Channel status</h2>
+              <Badge variant={status.audit_approved ? "success" : "warning"} dot>
+                {status.audit_approved ? "Audit approved" : "Private only"}
+              </Badge>
             </div>
             <div className="kv-list">
-              {PROVIDERS.map(({ key, label, icon: Icon }) => {
-                const row = status[key] || {};
-                return (
-                  <div key={key} className="kv-row">
-                    <span className="kv-key"><Icon size={14} />{label}</span>
-                    <span className="kv-val">
-                      {row.killed ? (
-                        <Badge variant="danger" dot>Stopped</Badge>
-                      ) : row.live ? (
-                        <Badge variant="success" dot>Live · {row.provider}</Badge>
-                      ) : (
-                        <Badge variant="neutral" dot>Sandbox</Badge>
-                      )}
-                    </span>
-                  </div>
-                );
-              })}
+              <div className="kv-row"><span className="kv-key">Kill switch</span><span className="kv-val">{status.kill_switch ? "Active" : "Off"}</span></div>
+              <div className="kv-row"><span className="kv-key">Quota remaining</span><span className="kv-val">{status.quota_remaining ?? "—"}</span></div>
+              <div className="kv-row"><span className="kv-key">Open exceptions</span><span className="kv-val">{(status.exceptions || []).length}</span></div>
             </div>
-            <p className="form-hint" style={{ marginTop: 12 }}>
-              Sandbox providers record messages locally. Add the credentials in <code>.env</code> to go live.
-            </p>
           </div>
 
           <div className="card">

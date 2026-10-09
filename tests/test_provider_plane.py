@@ -1,5 +1,3 @@
-import os
-
 import pytest
 
 from core.config import Settings
@@ -12,7 +10,6 @@ def test_manifest_dev_marks_simulated_providers():
     settings = Settings(engine_mode="dev")
     m = manifest(settings)
     assert m["engine_mode"] == "dev"
-    assert "email" in m["simulated"]
     assert "youtube" in m["simulated"]
     assert m["production_ready"] is False
 

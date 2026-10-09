@@ -1,4 +1,4 @@
-"""Start the Dual Engine HTTP API."""
+"""Start the YouTube Channel Engine HTTP API."""
 
 import subprocess
 import sys

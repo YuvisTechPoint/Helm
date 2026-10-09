@@ -1,22 +1,33 @@
+# YouTube Channel Engine — production-grade local/staging stack
+# Usage: docker compose up --build
+# Scale workers: docker compose up --scale worker=3
+
 services:
   postgres:
-    image: postgres:16
+    image: postgres:16-alpine
     environment:
       POSTGRES_USER: engine
       POSTGRES_PASSWORD: engine
       POSTGRES_DB: engine
     ports:
       - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U engine -d engine"]
       interval: 5s
-      timeout: 5s
-      retries: 20
+      timeout: 3s
+      retries: 10
 
   redis:
-    image: redis:7
+    image: redis:7-alpine
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   minio:
     image: minio/minio:latest
@@ -27,85 +38,79 @@ services:
     ports:
       - "9000:9000"
       - "9001:9001"
-
-  temporal-postgresql:
-    image: postgres:16
-    environment:
-      POSTGRES_USER: temporal
-      POSTGRES_PASSWORD: temporal
-      POSTGRES_DB: temporal
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U temporal -d temporal"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
+    volumes:
+      - miniodata:/data
 
   temporal:
-    image: temporalio/auto-setup:1.27.2
+    image: temporalio/auto-setup:1.25.2
     depends_on:
-      temporal-postgresql:
+      postgres:
         condition: service_healthy
     environment:
       DB: postgres12
       DB_PORT: 5432
-      POSTGRES_USER: temporal
-      POSTGRES_PWD: temporal
-      POSTGRES_SEEDS: temporal-postgresql
+      POSTGRES_USER: engine
+      POSTGRES_PWD: engine
+      POSTGRES_SEEDS: postgres
     ports:
       - "7233:7233"
 
-  temporal-ui:
-    image: temporalio/ui:2.31.2
-    depends_on:
-      - temporal
-    environment:
-      TEMPORAL_ADDRESS: temporal:7233
-      TEMPORAL_CORS_ORIGINS: http://localhost:3000
-    ports:
-      - "8080:8080"
-
   api:
     build: .
-    command: python run_api.py
     depends_on:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_started
-      minio:
-        condition: service_started
+        condition: service_healthy
       temporal:
         condition: service_started
     environment:
       DATABASE_URL: postgresql+psycopg://engine:engine@postgres:5432/engine
       REDIS_URL: redis://redis:6379/0
       TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_TASK_QUEUE: youtube-engine
       S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: engine
       S3_ACCESS_KEY: engine
       S3_SECRET_KEY: engine-secret
-      S3_BUCKET: engine
+      ENGINE_MODE: staging
+      RUN_MIGRATIONS: "true"
+      LOG_FORMAT: json
+      LOG_LEVEL: INFO
+      API_KEY: ${API_KEY:-staging-dev-key}
+      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
     ports:
       - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/live')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   worker:
     build: .
-    command: python run_worker.py
+    command: ["python", "run_worker.py"]
     depends_on:
-      - api
-      - temporal
+      api:
+        condition: service_healthy
     environment:
       DATABASE_URL: postgresql+psycopg://engine:engine@postgres:5432/engine
       REDIS_URL: redis://redis:6379/0
       TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_TASK_QUEUE: youtube-engine
       S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: engine
       S3_ACCESS_KEY: engine
       S3_SECRET_KEY: engine-secret
-      S3_BUCKET: engine
+      ENGINE_MODE: staging
+      RUN_MIGRATIONS: "false"
+      LOG_FORMAT: json
 
   dashboard:
     image: node:22-alpine
     working_dir: /app
-    command: sh -c "npm install && npm run dev -- --hostname 0.0.0.0"
+    command: sh -c "npm ci && npm run dev -- --hostname 0.0.0.0"
     volumes:
       - ./apps/dashboard:/app
     environment:
@@ -113,4 +118,9 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  miniodata:

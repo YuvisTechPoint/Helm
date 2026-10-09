@@ -12,7 +12,7 @@ if src not in sys.path:
     sys.path.insert(0, src)
 
 from core.db import Base  # noqa: E402
-import acquisition.models  # noqa: E402,F401
+import core.models  # noqa: E402,F401
 import youtube.models  # noqa: E402,F401
 
 config = context.config

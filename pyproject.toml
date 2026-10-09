@@ -3,9 +3,9 @@ requires = ["setuptools>=75"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "dual-engine"
+name = "youtube-channel-engine"
 version = "0.1.0"
-description = "Autonomous faceless YouTube channel and lead-to-client acquisition platform"
+description = "Autonomous faceless YouTube channel engine"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -27,10 +27,10 @@ dependencies = [
 dev = ["pytest>=8.3"]
 
 [project.scripts]
-dual-engine-api = "scripts.api:main"
-dual-engine-worker = "scripts.worker:main"
-dual-engine-e2e = "scripts.e2e:main"
-dual-engine-dev = "scripts.dev:main"
+youtube-engine-api = "scripts.api:main"
+youtube-engine-worker = "scripts.worker:main"
+youtube-engine-e2e = "scripts.e2e:main"
+youtube-engine-dev = "scripts.dev:main"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

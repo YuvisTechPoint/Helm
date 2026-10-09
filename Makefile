@@ -1,4 +1,4 @@
-.PHONY: install test api worker e2e dev docker-up docker-down clean
+.PHONY: install test api worker e2e dev dev-lite docker-up docker-down clean
 
 install:
 	pip install -e ".[dev]"
@@ -15,8 +15,13 @@ worker:
 e2e:
 	python run_e2e.py
 
+e2e-full: test e2e
+
 dev:
 	python scripts/dev.py
+
+dev-lite:
+	START_WORKER=0 python scripts/dev.py
 
 docker-up:
 	docker compose up --build

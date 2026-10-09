@@ -4,14 +4,13 @@ import { useState } from "react";
 import { Check, LoaderCircle, RotateCcw } from "lucide-react";
 import { API_BASE } from "../../lib/api";
 
-export default function ResolveButton({ id, scope }) {
+export default function ResolveButton({ id }) {
   const [status, setStatus] = useState("idle");
 
   async function resolve() {
     setStatus("loading");
-    const path = scope === "youtube" ? `/youtube/exceptions/${id}/resolve` : `/acquisition/escalations/${id}/resolve`;
     try {
-      const response = await fetch(`${API_BASE}${path}`, { method: "POST" });
+      const response = await fetch(`${API_BASE}/youtube/exceptions/${id}/resolve`, { method: "POST" });
       setStatus(response.ok ? "done" : "error");
     } catch {
       setStatus("error");

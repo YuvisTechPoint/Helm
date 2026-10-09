@@ -4,7 +4,7 @@
 
 ```bash
 git clone <repo>
-cd dual-engine
+cd youtube-channel-engine
 python -m venv .venv
 .venv\Scripts\activate        # Windows
 pip install -e ".[dev]"
@@ -29,18 +29,18 @@ python run_e2e.py
 
 ## Project conventions
 
-1. **Imports** — flat package names from `src/`: `from core.X`, `from youtube.X`, `from acquisition.X`
+1. **Imports** — flat package names from `src/`: `from core.X`, `from youtube.X`
 2. **Paths** — use `core.paths.REPO_ROOT`, `DATA_DIR`, `ARTIFACTS_DIR`; never hardcode `./data` or `./artifacts`
-3. **State** — lead/deal/topic transitions go through state machines in `lead_state.py` / `topic_state.py`
+3. **State** — topic transitions go through state machines in `topic_state.py`
 4. **Events** — business events use `Outbox.publish()` for transactional consistency
 5. **Providers** — no silent fakes in production; use `provider_plane.manifest()` for health
 6. **Tests** — add tests in `tests/`; run `pytest -q` before PR
 
 ## Adding a feature
 
-1. Domain logic in `src/youtube` or `src/acquisition`
+1. Domain logic in `src/youtube`
 2. Shared infra in `src/core`
-3. HTTP route in domain `http.py` or `src/api` for cross-cutting
+3. HTTP route in `youtube/http.py` or `src/api` for cross-cutting
 4. Dashboard page in `apps/dashboard/app/`
 5. Migration in `alembic/versions/` if schema changes
 

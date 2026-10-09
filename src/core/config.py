@@ -1,4 +1,14 @@
+from enum import Enum
+from functools import lru_cache
+
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class EngineMode(str, Enum):
+    DEV = "dev"
+    STAGING = "staging"
+    PRODUCTION = "production"
 
 
 class Settings(BaseSettings):
@@ -7,7 +17,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://engine:engine@localhost:5432/engine"
     redis_url: str = "redis://localhost:6379/0"
     temporal_address: str = "localhost:7233"
-    temporal_task_queue: str = "dual-engine"
+    temporal_task_queue: str = "youtube-engine"
 
     s3_endpoint: str = "http://localhost:9000"
     s3_bucket: str = "engine"
@@ -32,64 +42,80 @@ class Settings(BaseSettings):
     elevenlabs_voice_id: str = "stock-calm-en-us"
     tts_backup_api_key: str = ""
 
-    email_provider: str = "direct"
-    instantly_api_key: str = ""
-    apollo_api_key: str = ""
-    zerobounce_api_key: str = ""
-    calendar_provider: str = "calcom"
-    calcom_api_key: str = ""
-    crm_webhook_url: str = ""
-    stripe_secret_key: str = ""
-    stripe_webhook_secret: str = ""
-    razorpay_key_id: str = ""
-    razorpay_key_secret: str = ""
-    razorpay_webhook_secret: str = ""
-    payment_provider: str = "auto"
-    payment_currency: str = "inr"
-    payment_success_url: str = "https://example.com/thanks"
-
-    esign_provider: str = "memory"
-    documenso_api_key: str = ""
-    documenso_base_url: str = "https://app.documenso.com/api/v1"
-    documenso_template_id: str = ""
-    esign_webhook_secret: str = ""
-
-    whatsapp_token: str = ""
-    whatsapp_phone_number_id: str = ""
-    whatsapp_verify_token: str = ""
-    twilio_account_sid: str = ""
-    twilio_auth_token: str = ""
-    twilio_from_number: str = ""
-    vapi_api_key: str = ""
-    vapi_assistant_id: str = ""
-    vapi_phone_number_id: str = ""
-
-    acquisition_weekly_qualified_target: int = 5
-    acquisition_escalation_sla_hours: int = 24
-
     alert_email_to: str = ""
     telegram_bot_token: str = ""
     telegram_chat_id: str = ""
     slack_webhook_url: str = ""
     owner_notify_channels: str = "log,slack,email"
 
-    acquisition_tenant_id: str = "local"
-    acquisition_region: str = "india"
+    channel_id: str = "local"
+    youtube_policy_webhook_secret: str = ""
 
     api_key: str = ""
-    engine_mode: str = "dev"  # dev | staging | production
-    webhook_shared_secret: str = ""
-    inbound_email_webhook_secret: str = ""
-    email_events_webhook_secret: str = ""
-    calcom_webhook_secret: str = ""
-    vapi_webhook_secret: str = ""
-    youtube_policy_webhook_secret: str = ""
+    engine_mode: EngineMode = EngineMode.DEV
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
     engine_version: str = "2027.1"
-    db_pool_size: int = 10
-    db_max_overflow: int = 20
-    worker_threads: int = 16
+    db_pool_size: int = Field(default=10, ge=1, le=100)
+    db_max_overflow: int = Field(default=20, ge=0, le=200)
+    worker_threads: int = Field(default=16, ge=1, le=128)
+
+    log_level: str = "INFO"
+    log_format: str = "text"
+    otel_enabled: bool = False
+    otel_endpoint: str = ""
+    otel_service_name: str = "youtube-channel-api"
+    shutdown_timeout_s: float = Field(default=30.0, ge=5.0, le=300.0)
+    readiness_timeout_s: float = Field(default=2.0, ge=0.5, le=30.0)
+    redis_connect_timeout_s: float = Field(default=1.0, ge=0.1, le=10.0)
+    circuit_failure_threshold: int = Field(default=5, ge=1, le=50)
+    circuit_reset_after_s: float = Field(default=30.0, ge=5.0, le=600.0)
+    run_migrations: bool = False
+
+    @field_validator("engine_mode", mode="before")
+    @classmethod
+    def _normalize_engine_mode(cls, value):
+        if isinstance(value, EngineMode):
+            return value
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            aliases = {"development": EngineMode.DEV, "local": EngineMode.DEV, "prod": EngineMode.PRODUCTION}
+            if normalized in aliases:
+                return aliases[normalized]
+            return EngineMode(normalized)
+        return value
+
+    @field_validator("log_format")
+    @classmethod
+    def _validate_log_format(cls, value: str) -> str:
+        fmt = value.strip().lower()
+        if fmt not in {"text", "json"}:
+            raise ValueError("log_format must be 'text' or 'json'")
+        return fmt
+
+    @field_validator("log_level")
+    @classmethod
+    def _validate_log_level(cls, value: str) -> str:
+        allowed = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+        upper = value.strip().upper()
+        if upper not in allowed:
+            raise ValueError(f"log_level must be one of {sorted(allowed)}")
+        return upper
+
+    def mode_is_production(self) -> bool:
+        return self.engine_mode == EngineMode.PRODUCTION
+
+    def mode_is_dev(self) -> bool:
+        return self.engine_mode == EngineMode.DEV
 
 
+@lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+def reload_settings() -> Settings:
+    get_settings.cache_clear()
+    from core.platform import reset_platform
+
+    reset_platform()
+    return get_settings()

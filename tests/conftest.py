@@ -22,6 +22,16 @@ os.chdir(REPO_ROOT)
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def _fresh_settings():
+    """Settings are cached per process; reload so monkeypatched env vars apply."""
+    from core.config import reload_settings
+
+    reload_settings()
+    yield
+    reload_settings()
+
+
 @pytest.fixture
 def session():
     from core.bootstrap import db_session

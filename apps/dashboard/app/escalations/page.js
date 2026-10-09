@@ -1,4 +1,4 @@
-import { MonitorPlay, ShieldAlert, ShieldCheck, Target } from "lucide-react";
+import { MonitorPlay, ShieldAlert, ShieldCheck } from "lucide-react";
 import Alert from "../../components/Alert";
 import Badge from "../../components/Badge";
 import EmptyState from "../../components/EmptyState";
@@ -8,20 +8,15 @@ import { apiGet } from "../../lib/api";
 import ResolveButton from "./ResolveButton";
 
 export default async function EscalationsPage() {
-  const [acq, yt] = await Promise.all([apiGet("/acquisition/escalations"), apiGet("/youtube/exceptions")]);
-
-  const rows = [
-    ...(acq.escalations || []).map((row) => ({ ...row, scope: "acquisition" })),
-    ...(yt.exceptions || []).map((row) => ({ ...row, scope: "youtube" })),
-  ];
-
-  const error = acq.error || yt.error;
+  const yt = await apiGet("/youtube/exceptions");
+  const rows = yt.exceptions || [];
+  const error = yt.error;
 
   return (
     <>
       <PageHeader
         title="Escalations"
-        description="The only queue that needs you. Prospects receive a holding reply until you resolve; resolutions feed back into the profile."
+        description="Policy alerts, publish blocks, and kill-switch events that need your review."
       >
         <Badge variant={rows.length ? "danger" : "success"} dot>
           {rows.length ? `${rows.length} open` : "Clear"}
@@ -34,35 +29,32 @@ export default async function EscalationsPage() {
       <div className="card card-flush">
         <div className="card-header">
           <h2 className="card-title"><ShieldAlert size={16} />Owner queue</h2>
-          <span className="cell-muted" style={{ fontSize: 12.5 }}>24-hour SLA</span>
+          <span className="cell-muted" style={{ fontSize: 12.5 }}>Review promptly</span>
         </div>
         {rows.length === 0 ? (
           <EmptyState
             icon={ShieldCheck}
             title="Queue is empty"
-            description="Escalations appear on legal threats, out-of-scope pricing, low-confidence replies, double critic failures, or YouTube policy alerts."
+            description="Escalations appear on policy strikes, publish blocks, kill-switch events, or niche pivot recommendations."
           />
         ) : (
-          rows.map((row, index) => {
-            const ScopeIcon = row.scope === "youtube" ? MonitorPlay : Target;
-            return (
-              <div key={`${row.id}-${index}`} className="list-item">
-                <div className="list-item-main">
-                  <span className={`stat-icon ${row.scope === "youtube" ? "tone-info" : "tone-warning"}`}>
-                    <ScopeIcon size={15} />
-                  </span>
-                  <div>
-                    <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 3 }}>
-                      <h4 style={{ margin: 0 }}>{String(row.kind).replace(/_/g, " ")}</h4>
-                      <Badge variant={row.scope === "youtube" ? "info" : "warning"}>{row.scope}</Badge>
-                    </div>
-                    <p>{row.message}</p>
+          rows.map((row, index) => (
+            <div key={`${row.id}-${index}`} className="list-item">
+              <div className="list-item-main">
+                <span className="stat-icon tone-info">
+                  <MonitorPlay size={15} />
+                </span>
+                <div>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 3 }}>
+                    <h4 style={{ margin: 0 }}>{String(row.kind).replace(/_/g, " ")}</h4>
+                    <Badge variant="info">youtube</Badge>
                   </div>
+                  <p>{row.message}</p>
                 </div>
-                <ResolveButton id={row.id} scope={row.scope} />
               </div>
-            );
-          })
+              <ResolveButton id={row.id} />
+            </div>
+          ))
         )}
       </div>
     </>

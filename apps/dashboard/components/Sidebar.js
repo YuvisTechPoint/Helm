@@ -14,8 +14,8 @@ export default function Sidebar() {
       <Link href="/" className="sidebar-brand">
         <BrandMark />
         <div className="brand-text">
-          <span className="brand-name">Dual Engine</span>
-          <span className="brand-sub">Owner control plane</span>
+          <span className="brand-name">YouTube Engine</span>
+          <span className="brand-sub">Channel control plane</span>
         </div>
       </Link>
       <nav className="sidebar-nav" aria-label="Primary">

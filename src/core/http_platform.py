@@ -11,7 +11,17 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from core.errors import BudgetExceeded, ConfigurationError, InvalidTransition, IsolationError, MissingCredentials, PolicyDenied, ProviderUnavailable
 
 
-OPEN_PATHS = {"/health", "/ready", "/live", "/metrics", "/docs", "/openapi.json", "/redoc"}
+OPEN_PATHS = {"/", "/health", "/ready", "/live", "/metrics", "/platform", "/docs", "/openapi.json", "/redoc", "/json/version"}
+
+
+def _rollback_app_session(request: Request) -> None:
+    session = getattr(request.app.state, "session", None)
+    if session is None:
+        return
+    try:
+        session.rollback()
+    except Exception:
+        pass
 
 
 class RequestContextMiddleware(BaseHTTPMiddleware):
@@ -42,7 +52,9 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
                 response = await call_next(request)
             except Exception:
                 metrics().inc("http_errors")
+                _rollback_app_session(request)
                 raise
+            _rollback_app_session(request)
         if response.status_code >= 500:
             metrics().inc("http_5xx")
         response.headers["X-Request-Id"] = request_id

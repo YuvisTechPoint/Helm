@@ -1,16 +1,10 @@
 import {
-  BrainCircuit,
-  Building2,
-  FlaskConical,
   LayoutDashboard,
-  Mail,
-  MessagesSquare,
   MonitorPlay,
   Play,
   Radar,
   ShieldAlert,
   ShieldCheck,
-  Wallet,
 } from "lucide-react";
 
 export const NAV_SECTIONS = [
@@ -19,25 +13,14 @@ export const NAV_SECTIONS = [
     items: [
       { href: "/", label: "Dashboard", icon: LayoutDashboard },
       { href: "/autopilot", label: "Autopilot", icon: Radar },
-      { href: "/actions", label: "Run engines", icon: Play },
+      { href: "/actions", label: "Run pipeline", icon: Play },
       { href: "/escalations", label: "Escalations", icon: ShieldAlert },
       { href: "/controls", label: "Controls & compliance", icon: ShieldCheck },
     ],
   },
   {
-    label: "Acquisition",
-    items: [
-      { href: "/profile", label: "Service profile", icon: Building2 },
-      { href: "/threads", label: "Conversations", icon: MessagesSquare },
-      { href: "/health", label: "Mailboxes", icon: Mail },
-      { href: "/money", label: "Revenue", icon: Wallet },
-      { href: "/experiments", label: "Experiments", icon: FlaskConical },
-      { href: "/learning", label: "Learning & reports", icon: BrainCircuit },
-    ],
-  },
-  {
-    label: "YouTube",
-    items: [{ href: "/youtube", label: "Channel engine", icon: MonitorPlay }],
+    label: "Channel",
+    items: [{ href: "/youtube", label: "YouTube engine", icon: MonitorPlay }],
   },
 ];
 

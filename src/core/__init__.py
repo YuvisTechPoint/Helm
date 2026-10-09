@@ -1,1 +1,1 @@
-"""Shared runtime for the YouTube and acquisition engines."""
+"""Shared runtime for the YouTube channel engine."""

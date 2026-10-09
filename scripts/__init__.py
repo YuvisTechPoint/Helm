@@ -1,1 +1,1 @@
-"""CLI entrypoints for the dual-engine platform."""
+"""CLI entrypoints for the YouTube channel engine."""
